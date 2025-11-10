@@ -217,6 +217,86 @@ class UserControllerIntegrationTest {
                 .andExpect(jsonPath("$.message").value(containsString("Email already exists")));
     }
 
+    @Test
+    void shouldFailValidationWhenPasswordMissingRequirements() throws Exception {
+        UserRequest request = UserRequest.builder()
+                .username("johndoe")
+                .email("john@example.com")
+                .password("weakpass") // Missing uppercase, digit, special char
+                .build();
+
+        mockMvc.perform(post("/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Validation failed"))
+                .andExpect(jsonPath("$.details").isArray())
+                .andExpect(jsonPath("$.details[*]").value(hasItem(containsString("Password must contain"))));
+    }
+
+    @Test
+    void shouldFailValidationWhenUsernameHasInvalidCharacters() throws Exception {
+        UserRequest request = UserRequest.builder()
+                .username("john-doe!") // Invalid characters
+                .email("john@example.com")
+                .password("SecurePass123!")
+                .build();
+
+        mockMvc.perform(post("/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Validation failed"))
+                .andExpect(jsonPath("$.details[*]").value(hasItem(containsString("Username can only contain"))));
+    }
+
+    @Test
+    void shouldFailValidationWhenEmailIsInvalid() throws Exception {
+        UserRequest request = UserRequest.builder()
+                .username("johndoe")
+                .email("not-an-email") // Invalid email
+                .password("SecurePass123!")
+                .build();
+
+        mockMvc.perform(post("/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Validation failed"))
+                .andExpect(jsonPath("$.details[*]").value(hasItem(containsString("Email"))));
+    }
+
+    @Test
+    void shouldFailValidationWhenRequiredFieldsMissing() throws Exception {
+        UserRequest request = UserRequest.builder()
+                .build(); // All required fields missing
+
+        mockMvc.perform(post("/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Validation failed"))
+                .andExpect(jsonPath("$.details").isArray())
+                .andExpect(jsonPath("$.details.length()").value(greaterThanOrEqualTo(3))); // username, email, password
+    }
+
+    @Test
+    void shouldFailValidationWhenFieldsTooLong() throws Exception {
+        UserRequest request = UserRequest.builder()
+                .username("a".repeat(51)) // Too long
+                .email("john@example.com")
+                .password("SecurePass123!")
+                .firstName("a".repeat(51)) // Too long
+                .build();
+
+        mockMvc.perform(post("/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Validation failed"))
+                .andExpect(jsonPath("$.details").isArray());
+    }
+
     private User createTestUser(String username, String email) {
         User user = User.builder()
                 .username(username)
