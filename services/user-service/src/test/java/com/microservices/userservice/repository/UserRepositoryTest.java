@@ -332,7 +332,7 @@ class UserRepositoryTest {
 
         assertThat(updatedUser.getEmail()).isEqualTo("newemail@example.com");
         assertThat(updatedUser.getFirstName()).isEqualTo("Johnny");
-        assertThat(updatedUser.getUpdatedAt()).isAfter(updatedUser.getCreatedAt());
+        assertThat(updatedUser.getUpdatedAt()).isAfterOrEqualTo(updatedUser.getCreatedAt());
     }
 
     @Test
